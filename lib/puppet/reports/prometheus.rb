@@ -21,16 +21,28 @@ Puppet::Reports.register_report(:prometheus) do
   ENVIRONMENTS = config['environments']
   REPORTS = config['reports']
   STALE_TIME = config['stale_time']
+  NODE_DIRECTORY = config['node_directory']
+  NODE_LABELS = config['node_labels']
 
   raise(Puppet::ParseError, "#{configfile}: textfile_directory is not set or is missing.") if TEXTFILE_DIRECTORY.nil? || !File.exist?(TEXTFILE_DIRECTORY)
 
   def process
     return unless ENVIRONMENTS.nil? || ENVIRONMENTS.include?(environment)
 
-    common_values = {
+    node_file = File.join(NODE_DIRECTORY, "#{host}.yaml")
+    node_labels = {
       environment: environment,
       host: host,
-    }.reduce([]) do |values, extra|
+    }
+    if !NODE_LABELS.empty? && File.exist?(node_file)
+      node_data = YAML.load_file(node_file)
+      node_labels = NODE_LABELS.reduce(node_labels) do |labels, label|
+        value = node_data.dig(*label.split('.'))
+        labels[label.gsub('.', '_')] = value unless value.nil?
+      end
+    end
+
+    common_values = node_labels.reduce([]) do |values, extra|
       values + Array("#{extra[0]}=\"#{extra[1]}\"")
     end
 
