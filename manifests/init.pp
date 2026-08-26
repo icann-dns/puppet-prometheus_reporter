@@ -23,7 +23,7 @@ class prometheus_reporter (
     'environments'       => $environments,
     'reports'            => $reports,
     'stale_time'         => $stale_time,
-  }.filter |$k, $v| { !$v.empty }  # undef.empty is falsy
+  }.filter |$k, $v| { $v != undef and ($v !~ Array or !$v.empty) }  # drop undef and empty arrays
   file { "${config_directory}/prometheus.yaml":
     ensure  => file,
     owner   => 'root',
